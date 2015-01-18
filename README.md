@@ -4,6 +4,7 @@ Helper library for connecting to the Answers Cloud Services (ForeSee in particul
 ###Installation &nbsp;  [![npm version](https://badge.fury.io/js/acs-apiclient.svg)](http://badge.fury.io/js/acs-apiclient)
 ```sh
 npm install acs-apiclient
+```
 ###Simple Usage
 ```javascript
 var acsClient = require("acs-apiclient");
