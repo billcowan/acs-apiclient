@@ -83,7 +83,7 @@ var ACSClient = function (options, errorcallback) {
  * @param callback
  * @private
  */
-ACSClient.prototype._resetRetryAuthenticationState = function(callback) {
+ACSClient.prototype._resetRetryAuthenticationState = function (callback) {
   // Try logging in again ONCE
   this.opts.oauth_token_secret = acsutils._provideSymbol;
   this.opts.oauth_verifier = acsutils._provideSymbol;
@@ -92,6 +92,91 @@ ACSClient.prototype._resetRetryAuthenticationState = function(callback) {
   this.opts.jsession_id = null;
   this._oa = null;
   this._verifyAuthenticationState(callback);
+};
+
+/**
+ * Overwrite any old cookies with the new ones
+ */
+ACSClient.prototype._reconcileCookies = function (oldcookies, newcookies) {
+  oldcookies = oldcookies || [];
+  newcookies = newcookies || [];
+  function getCookieName(ck) {
+    ck = (ck || "").toString();
+    return ck.split('=')[0];
+  }
+
+  var finalcookies = [];
+  for (var i = 0; i < oldcookies.length; i++) {
+    var finalcookie = oldcookies[i];
+    var cname = getCookieName(oldcookies[i]);
+    for (var j = 0; j < newcookies.length; j++) {
+      var nname = getCookieName(newcookies[j]);
+      if (cname == nname) {
+        finalcookie = newcookies.splice(j, 1).toString();
+      }
+    }
+    finalcookies.push(finalcookie);
+  }
+  for (var k = 0; k < newcookies.length; k++) {
+    finalcookies.push(newcookies[k]);
+  }
+  return finalcookies;
+};
+
+/**
+ * Remove a cookie value
+ * @param cookieset
+ * @param cookiename
+ * @private
+ */
+ACSClient.prototype._removeCookieFromSet = function (cookieset, cookiename) {
+  function getCookieName(ck) {
+    ck = (ck || "").toString();
+    return ck.split('=')[0];
+  }
+  for (var i = 0; i < cookieset.length; i++) {
+    var cn = getCookieName(cookieset[i]);
+    if (cn.toLowerCase() == cookiename.toLowerCase()) {
+      cookieset.splice(i, 1);
+    }
+  }
+  return cookieset;
+};
+
+/**
+ * Add a cookie
+ * @param cookieset
+ * @param cookiename
+ * @private
+ */
+ACSClient.prototype._addCookieToSet = function (cookieset, cookiename, value) {
+  this._removeCookieFromSet(cookieset, cookiename);
+  cookieset.push(cookiename + "=" + value);
+  return cookieset;
+};
+
+/**
+ * Get the cookie value
+ * @param cookieset
+ * @param cookiename
+ * @private
+ */
+ACSClient.prototype._getCookieValue = function (cookieset, cookiename) {
+  function getCookieName(ck) {
+    ck = (ck || "").toString();
+    return ck.split('=')[0];
+  }
+
+  var finalval = "";
+  for (var i = 0; i < cookieset.length; i++) {
+    var cn = getCookieName(cookieset[i]);
+    if (cn.toLowerCase() == cookiename.toLowerCase()) {
+      finalval = cookieset[i].toString().substr(cookieset[i].toString().indexOf('=') + 1);
+      finalval = finalval.substr(0, finalval.indexOf(';'));
+      break;
+    }
+  }
+  return finalval;
 };
 
 /**
@@ -127,7 +212,7 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
     }
 
     // Get the request token
-    this._oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results) {
+    this._oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results, serverCookies) {
       if (error) {
         var errorinfo = {
           msg: "There was an issue getting the request token: " + JSON.stringify(error),
@@ -141,34 +226,36 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
         opts.oauth_token_secret = oauth_token_secret;
 
         quickhttp.post(opts.service_root, opts.login, 443, "j_username=" + encodeURIComponent(opts.username) + "&j_password=" + encodeURIComponent(opts.password), function (code, response, body) {
-          var loc = (response.headers.location || '').toString(),
-            cookieinfo = response.headers['set-cookie'],
-            S24Cookie = "";
 
-          for (var j = 0; j < cookieinfo.length; j++) {
-            var cki = cookieinfo[j],
-              cookiename = cki.split('=')[0],
-              cookiepayload = cki.substr(cki.indexOf('=') + 1).split('; ');
-            if (cookiename == "S24Cookie") {
-              S24Cookie = decodeURIComponent(cookiepayload[0]);
-              break;
-            }
-          }
+          serverCookies = ctx._reconcileCookies(serverCookies, response.headers['set-cookie']);
 
-          if (code != 302 || !def(loc) || loc.indexOf('jsession') == -1) {
+          var jsessionid = ctx._getCookieValue(serverCookies, "jsessionid");
+
+          var redirectLocation = response.caseless.dict.location.toString();
+
+          if (code != 302 || !jsessionid || jsessionid.length < 2) {
             var errorinfo2 = {
               msg: "There was an issue logging in the user. Did not get the anticipated response from the server. Response code " + code,
               code: "COULDNOTLOGIN"
             };
             ctx._errorcallback(errorinfo2);
             callback(errorinfo2);
-          } else if (loc.indexOf('#loginfailed') > -1) {
+          } else if (redirectLocation.indexOf('#loginfailed') > -1) {
             var errorinfo3 = {msg: "Credentials were invalid.", code: "INVALIDCREDENTIALS"};
             ctx._errorcallback(errorinfo3);
             callback(errorinfo3);
           } else {
-            opts.jsession_id = decodeURIComponent(loc.substring(loc.indexOf('=') + 1));
+            opts.jsession_id = jsessionid;
+
+            // Add the consumer type cookie
+            ctx._addCookieToSet(serverCookies, "CONSUMER_TYPE", opts.consumer_type);
+
+            // Authorize
             quickhttp.get(opts.service_root, opts.authorization + "?oauth_token=" + encodeURIComponent(opts.oauth_token), 443, function (code, response, body) {
+
+              // Integrate new cookies
+              serverCookies = ctx._reconcileCookies(serverCookies, response.headers['set-cookie']);
+
               if (code != 200) {
                 var errorinfo4 = {
                   msg: "Could not authorize the oauth_token. Server responded with " + code,
@@ -188,6 +275,7 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                   }
                 }
                 if (verifier.length < 2) {
+                  console.log(response);
                   var errorinfo5 = {
                     msg: "Could not find oAuth verifier. Server response location was " + path,
                     code: "COULDNOTFINDVERIFIER"
@@ -196,6 +284,8 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                   callback(errorinfo5);
                 } else {
                   opts.verifier = verifier;
+
+                  // Get the access token
                   ctx._oa.getOAuthAccessToken(opts.oauth_token, opts.oauth_token_secret, opts.verifier, function (error, oauth_access_token, oauth_access_token_secret, results2) {
                     if (error) {
                       var errorinfo6 = {
@@ -213,24 +303,20 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                         ctx._errorcallback(errorinfo7);
                         callback(errorinfo7);
                       } else {
+                        // Assign the all importent access and token secrets
                         opts.oauth_access_token = oauth_access_token;
                         opts.oauth_access_token_secret = oauth_access_token_secret;
-                        // Make the callback
+
+                        // Make the callback to user code
                         callback();
                       }
                     }
-                  }, {
-                    "S24Cookie": S24Cookie
-                  });
+                  }, serverCookies);
                 }
               }
-            }, {
-              "JSESSIONID": opts.jsession_id,
-              "S24Cookie": S24Cookie,
-              "CONSUMER_TYPE": opts.consumer_type
-            });
+            }, serverCookies);
           }
-        });
+        }, serverCookies);
       }
     });
   } else {
@@ -246,10 +332,10 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
  * @param callback
  * @private
  */
-ACSClient.prototype._performReasonedRequest = function(path, method, data, callback) {
+ACSClient.prototype._performReasonedRequest = function (path, method, data, callback) {
 
   method = method.toUpperCase().trim();
-  callback = callback || function() {
+  callback = callback || function () {
     // no-op
   };
   data = data || {};
@@ -266,7 +352,7 @@ ACSClient.prototype._performReasonedRequest = function(path, method, data, callb
   if (cnt == 0) {
     qstrver = "";
   }
-  
+
   switch (method) {
     case "GET":
       this._oa.get(this.opts.service_root + "/services/" + path + qstrver, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, callback);
@@ -322,8 +408,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
     if (error) {
       callback(error);
     } else {
-      ctx._performReasonedRequest(path, method, data, function (error, data, response) {
-
+      ctx._performReasonedRequest(path, method, data, function (error, response, body, serverCookies) {
         if (response.statusCode == 401) {
           // Try logging in again
           ctx._resetRetryAuthenticationState(function (error) {
@@ -331,7 +416,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
             if (error) {
               callback(error);
             } else {
-              ctx._performReasonedRequest(path, method, data, function (error, data, response) {
+              ctx._performReasonedRequest(path, method, data, function (error, response, body, serverCookies) {
 
                 if (error) {
                   var errorinfo = {
@@ -341,7 +426,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
                   ctx._errorcallback(errorinfo);
                   callback(errorinfo);
                 } else {
-                  var dtaobj = JSON.parse(data);
+                  var dtaobj = JSON.parse(body);
                   callback(null, dtaobj);
                 }
 
@@ -357,7 +442,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
           ctx._errorcallback(errorinfo);
           callback(errorinfo);
         } else {
-          var dtaobj = JSON.parse(data);
+          var dtaobj = JSON.parse(body);
           callback(null, dtaobj);
         }
       });
