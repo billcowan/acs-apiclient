@@ -1,6 +1,6 @@
 {
   "name": "acs-apiclient",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Node helper library for connecting to the Answers Cloud Services (ForeSee in particular) web API in a headless manner.",
   "main": "index.js",
   "scripts": {
@@ -25,7 +25,10 @@
   },
   "homepage": "https://github.com/alexsaves/acs-apiclient",
   "dependencies": {
+    "crypto": "0.0.3",
     "extend": "^2.0.0",
-    "request": "^2.51.0"
+    "querystring": "^0.2.0",
+    "request": "^2.51.0",
+    "url": "^0.10.2"
   }
 }
