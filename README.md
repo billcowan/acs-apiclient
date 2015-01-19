@@ -43,5 +43,11 @@ If there is a problem authenticating or reaching an endpoint, or if a request is
 * `COULDNOTFINDVERIFIER` - There was a problem with the authentication flow. Might be due to an invalid `consumer_type`, `consumer_key` or `consumer_secret`.
 * `COULDNOTGETACCESSTOKEN` - There was a problem with the authentication flow. Might be due to an invalid `consumer_type`, `consumer_key` or `consumer_secret`.
 * `COULDNOTGETACCESSTOKENNULL` - There was a problem with the authentication flow. Might be due to an invalid `consumer_type`, `consumer_key` or `consumer_secret`.
-
+Errors are provided as a simple JavaScript object. Here's an example:
+```json
+{
+  "msg": "Error getting the access token since they were null.",
+  "code": "COULDNOTGETACCESSTOKENNULL"
+}
+```
 
