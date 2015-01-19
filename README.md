@@ -34,3 +34,14 @@ client.callResource("currentUser", "GET", {}, function(error, data) {
   }
 });
 ```
+###Errors
+If there is a problem authenticating or reaching an endpoint, or if a request is malformed, an error will be generated and sent to both the global error handler and passed as an `error` object to the handler of the resource call. Possible error codes:
+* `INVALIDREQUESTTOKEN` - Could not get a request token. There may be something wrong with your consumer key or consumer secret.
+* `COULDNOTLOGIN` - There was a problem with the login process. Probably not due to invalid credentials.
+* `INVALIDCREDENTIALS` - Could not log in with the provided credentials.
+* `COULDNOTAUTHTOKEN` - Could not authorize the auth token.
+* `COULDNOTFINDVERIFIER` - There was a problem with the authentication flow. Might be due to an invalid `consumer_type`, `consumer_key` or `consumer_secret`.
+* `COULDNOTGETACCESSTOKEN` - There was a problem with the authentication flow. Might be due to an invalid `consumer_type`, `consumer_key` or `consumer_secret`.
+* `COULDNOTGETACCESSTOKENNULL` - There was a problem with the authentication flow. Might be due to an invalid `consumer_type`, `consumer_key` or `consumer_secret`.
+
+
