@@ -371,6 +371,30 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
 };
 
 /**
+ * Ensure that you are authenticated. Use this sparingly.
+ * @param callback
+ */
+ACSClient.prototype.authenticate = function(callback) {
+  callback = callback || function() {
+    // no-op
+  };
+  var ctx = this;
+  this._verifyAuthenticationState(function (error) {
+
+    if (error) {
+      // call the callback
+      callback(error, (!error));
+    } else {
+      // Call the current user endpoint
+      ctx.callResource("currentUser", "GET", {}, function (error) {
+        // call the callback
+        callback(error, (!error));
+      });
+    }
+  });
+};
+
+/**
  * Call a protected resource
  * @param path String The resource. Eg: "currentUser"
  * @param method String "GET", "PUT", "POST", "DELETE"

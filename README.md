@@ -51,4 +51,33 @@ Errors are provided as a simple JavaScript object. Here's an example:
   "code": "COULDNOTGETACCESSTOKENNULL"
 }
 ```
+###Authentication
+Authentication will occur automatically, when necessary, as you make service calls. Therefor, if you have not authenticated already and been granted an access token and an access token secret, the first call to an endpoint will take longer than the rest since it has to go through the authentication flow first.
 
+If you want to check your credentials or just ensure you're actually able to contact an endpoint using the information provided, you can call the `authenticate()` method:
+```javascript
+// Check our state. You don't need to do this for every call. Just to validate credentials or tokens for the first time.
+client.authenticate(function(error, isConnected) {
+  if (error || !isConnected) {
+    console.log("Invalid credentials or tokens.");
+  } else {
+    // We are connected
+  }
+});
+```
+Note that this is a relatively expensive call to make, so only use it when you want to validate your credentials. Also remember that calling an endpoint has basically the same effect since it will return an `error` object if there is a problem.
+###Accessing without Credentials
+ACS uses an oAuth authentication scheme so you may want to take advantage of the fact that once you have an access token and an access token secret, you should not need to keep user credentials around to continue using the service layer. ACS can issue you a long-lived token if you request it so you can just set the following attributes on the `options` object rather than the u/p combo:
+```javascript
+// Authenticating without usernames or passwords
+var client = new acsClient({
+   consumer_key: "[CONSUMER KEY PROVIDED BY FORESEE]",
+   consumer_secret: "[CONSUMER SECRET PROVIDED BY FORESEE]",
+   consumer_type: "[CONSUMER TYPE PROVIDED BY FORESEE]",
+   oauth_access_token: "[AUTHENTICATED ACCESS TOKEN]",
+   oauth_access_token_secret: "[AUTHENTICATED ACCESS TOKEN SECRET]"
+ }, function(error) {
+  console.log("ERROR: ", error);
+});
+```
+Using this technique can result in performance improvements since it eliminates the need to move through the authentication flow.
