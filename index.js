@@ -44,14 +44,12 @@ var ACSClient = function (options, errorcallback) {
    * The error handler
    * @private
    */
-  this._errorcallback = errorcallback;
+  this._errorcallback = errorcallback || function() {
+    // no-op
+  };
 
   // Do some validation
   var def = acsutils.isDefined;
-
-  if (!def(this._errorcallback) || typeof errorcallback != 'function') {
-    throw new Error("Provide an error callback.");
-  }
 
   if (!def(this.opts.service_root)) {
     this._errorcallback({msg: "Invalid service_root.", code: "MISSINGINFO"});

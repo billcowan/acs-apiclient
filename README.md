@@ -80,4 +80,9 @@ var client = new acsClient({
   console.log("ERROR: ", error);
 });
 ```
-Using this technique can result in performance improvements since it eliminates the need to move through the authentication flow.
+Using this technique can result in performance improvements since it eliminates the need to move through the authentication flow. The only downside is, if your token has expired, then you will need to authenticate again with your username and password.
+
+Getting your access token and secret is easy: just look for them on the `client.opts` object:
+```javascript
+console.log(client.oauth_access_token, client.oauth_access_token_secret);
+```
