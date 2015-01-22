@@ -27,6 +27,7 @@
   "dependencies": {
     "crypto": "0.0.3",
     "extend": "^2.0.0",
+    "moment": "^2.9.0",
     "querystring": "^0.2.0",
     "request": "^2.51.0",
     "url": "^0.10.2"

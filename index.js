@@ -1,7 +1,8 @@
 var OAuth = require('./lib/oauth.js').OAuth,
   quickhttp = require('./lib/quickhttp.js'),
   extend = require('extend'),
-  acsutils = require('./lib/acsutils.js');
+  acsutils = require('./lib/acsutils.js'),
+  datecriteria = require('./lib/datecriteria.js');
 
 /**
  * Base options
@@ -192,22 +193,23 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
     opts = this.opts,
     ctx = this;
 
+  // We need to log in
+  if (!this.oa) {
+    /**
+     * Our main oAuth instance
+     * @type {OAuth}
+     * @private
+     */
+    this._oa = new OAuth(opts.service_root + opts.request_token,
+      opts.service_root + opts.access_token,
+      opts.consumer_key,
+      opts.consumer_secret,
+      "1.0",
+      "http://localhost",
+      "HMAC-SHA1");
+  }
+
   if (!(def(this.opts.oauth_access_token) && def(this.opts.oauth_access_token_secret))) {
-    // We need to log in
-    if (!this.oa) {
-      /**
-       * Our main oAuth instance
-       * @type {OAuth}
-       * @private
-       */
-      this._oa = new OAuth(opts.service_root + opts.request_token,
-        opts.service_root + opts.access_token,
-        opts.consumer_key,
-        opts.consumer_secret,
-        "1.0",
-        "http://localhost",
-        "HMAC-SHA1");
-    }
 
     // Get the request token
     this._oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results, serverCookies) {
@@ -344,7 +346,11 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
     if (cnt > 0) {
       qstrver += "&";
     }
-    qstrver += encodeURIComponent(item) + "=" + encodeURIComponent(data[item]);
+    if (item == 'criteria' || item == 'dateRange') {
+      qstrver +=  encodeURIComponent(item) + "=" + encodeURIComponent(JSON.stringify(data[item]));
+    } else {
+      qstrver += encodeURIComponent(item) + "=" + encodeURIComponent(data[item]);
+    }
     cnt++;
   }
   if (cnt == 0) {
@@ -423,9 +429,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
   if (path.charAt(0) == '/') {
     path = path.substr(1);
   }
-
   this._verifyAuthenticationState(function (error) {
-
     // Great! Was there an error?
     if (error) {
       callback(error);
@@ -449,7 +453,14 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
                   callback(errorinfo);
                 } else {
                   var dtaobj = JSON.parse(body);
-                  callback(null, dtaobj);
+                  if (dtaobj.errorCode) {
+                    callback({
+                      msg: dtaobj.message,
+                      code: dtaobj.errorCode.toString()
+                    }, null);
+                  } else {
+                    callback(null, dtaobj);
+                  }
                 }
 
               });
@@ -465,11 +476,27 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
           callback(errorinfo);
         } else {
           var dtaobj = JSON.parse(body);
-          callback(null, dtaobj);
+          if (dtaobj.errorCode) {
+            callback({
+              msg: dtaobj.message,
+              code: dtaobj.errorCode.toString()
+            }, null);
+          } else {
+            callback(null, dtaobj);
+          }
         }
       });
     }
   });
+};
+
+/**
+ * Constructs a properly formatted date object
+ * @param clientId Number The client ID. Needed for some dates.
+ * @returns {*|exports}
+ */
+ACSClient.prototype.constructDateObject = function(clientId) {
+  return datecriteria.apply(this, arguments);
 };
 
 /**
