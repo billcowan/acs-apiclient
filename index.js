@@ -275,7 +275,6 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                   }
                 }
                 if (verifier.length < 2) {
-                  console.log(response);
                   var errorinfo5 = {
                     msg: "Could not find oAuth verifier. Server response location was " + path,
                     code: "COULDNOTFINDVERIFIER"
