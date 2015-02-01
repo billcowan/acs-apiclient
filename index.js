@@ -257,7 +257,7 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
               // Integrate new cookies
               serverCookies = ctx._reconcileCookies(serverCookies, response.headers['set-cookie']);
 
-              if (code != 200) {
+              if (code != 302) {
                 var errorinfo4 = {
                   msg: "Could not authorize the oauth_token. Server responded with " + code,
                   code: "COULDNOTAUTHTOKEN"
@@ -265,7 +265,7 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                 ctx._errorcallback(errorinfo4);
                 callback(errorinfo4);
               } else {
-                var path = response.req.path.toString(),
+                var path = response.headers.location.toString().split('?')[1],
                   parts = path.split('&'),
                   verifier = "";
                 for (var p = 0; p < parts.length; p++) {
