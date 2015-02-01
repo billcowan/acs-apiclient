@@ -45,7 +45,7 @@ var ACSClient = function (options, errorcallback) {
    * The error handler
    * @private
    */
-  this._errorcallback = errorcallback || function() {
+  this._errorcallback = errorcallback || function () {
     // no-op
   };
 
@@ -133,6 +133,7 @@ ACSClient.prototype._removeCookieFromSet = function (cookieset, cookiename) {
     ck = (ck || "").toString();
     return ck.split('=')[0];
   }
+
   for (var i = 0; i < cookieset.length; i++) {
     var cn = getCookieName(cookieset[i]);
     if (cn.toLowerCase() == cookiename.toLowerCase()) {
@@ -313,12 +314,27 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                   }, serverCookies);
                 }
               }
-            }, serverCookies);
+            }, serverCookies, function (error) {
+              var errorinfo62 = {
+                msg: "Error performing HTTP Get: " + JSON.stringify(error),
+                code: "Error"
+              };
+              ctx._errorcallback(errorinfo62);
+              callback(errorinfo62);
+            });
           }
-        }, serverCookies);
+        }, serverCookies, function (error) {
+          var errorinfo623 = {
+            msg: "Error performing HTTP Post: " + JSON.stringify(error),
+            code: "Error"
+          };
+          ctx._errorcallback(errorinfo623);
+          callback(errorinfo623);
+        });
       }
     });
   } else {
+
     callback();
   }
 };
@@ -346,7 +362,7 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
       qstrver += "&";
     }
     if (item == 'criteria' || item == 'dateRange') {
-      qstrver +=  encodeURIComponent(item) + "=" + encodeURIComponent(JSON.stringify(data[item]));
+      qstrver += encodeURIComponent(item) + "=" + encodeURIComponent(JSON.stringify(data[item]));
     } else {
       qstrver += encodeURIComponent(item) + "=" + encodeURIComponent(data[item]);
     }
@@ -377,8 +393,8 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
  * Ensure that you are authenticated. Use this sparingly.
  * @param callback
  */
-ACSClient.prototype.authenticate = function(callback) {
-  callback = callback || function() {
+ACSClient.prototype.authenticate = function (callback) {
+  callback = callback || function () {
     // no-op
   };
   var ctx = this;
@@ -494,7 +510,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
  * @param clientId Number The client ID. Needed for some dates.
  * @returns {*|exports}
  */
-ACSClient.prototype.constructDateObject = function(clientId) {
+ACSClient.prototype.constructDateObject = function (clientId) {
   return datecriteria.apply(this, arguments);
 };
 
