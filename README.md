@@ -121,3 +121,15 @@ client.constructDateObject(CLIENTID, new Date(2013, 3, 4));  // Get for April 4,
 // Get for a range between April 4, 2013 and January 1, 2014:
 client.constructDateObject(CLIENTID, new Date(2013, 3, 4), new Date(2014, 0, 1);  
 ```
+###Date Comparisons
+To perform a date comparison on a period period, which is possible on some endpoints, make the last argument in your `constructDateObject()` call equal to `PRIORPERIOD`. Then, assign this to the `dateRangeCompare` attribute of the criteria object:
+```javascript
+client.callResource("/someEndpoint", "GET", {
+  criteria: {
+    "dateRange": client.constructDateObject(CLIENTID, "WEEKTODATE"),
+    "dateRangeCompare": client.constructDateObject(CLIENTID, "WEEKTODATE", "PRIORPERIOD")
+  }
+}, function(error, data) {
+  // Handle response
+});
+```
