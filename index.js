@@ -354,7 +354,7 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
     // no-op
   };
   data = data || {};
-
+if(method !== "POST" && method !== "PUT"){
   var qstrver = "?",
     cnt = 0;
   for (var item in data) {
@@ -371,6 +371,7 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
   if (cnt == 0) {
     qstrver = "";
   }
+}
 
   switch (method) {
     case "GET":
@@ -380,10 +381,10 @@ ACSClient.prototype._performReasonedRequest = function (path, method, data, call
       this._oa.delete(this.opts.service_root + "/services/" + path + qstrver, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, callback);
       break;
     case "PUT":
-      this._oa.put(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, qstrver, "application/json", callback);
+      this._oa.put(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, data, "application/json", callback);
       break;
     case "POST":
-      this._oa.post(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, qstrver, "application/json", callback);
+      this._oa.post(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, data, "application/json", callback);
       break;
   }
 
