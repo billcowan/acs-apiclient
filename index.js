@@ -451,7 +451,7 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
       callback(error);
     } else {
       ctx._performReasonedRequest(path, method, data, function (error, response, body, serverCookies) {
-        if (response.statusCode == 401) {
+        if (response && response.statusCode == 401) {
           // Try logging in again
           ctx._resetRetryAuthenticationState(function (error) {
 
