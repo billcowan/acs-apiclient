@@ -121,6 +121,11 @@ client.constructDateObject(CLIENTID, new Date(2013, 3, 4));  // Get for April 4,
 // Get for a range between April 4, 2013 and January 1, 2014:
 client.constructDateObject(CLIENTID, new Date(2013, 3, 4), new Date(2014, 0, 1);  
 ```
+###Fiscal Calendars
+Normally, relative and general dates are calculated using normal calendar (Gregorian) dates. If your account is set up with fiscal calendars, you can switch to this instead by passing `FISCAL` as the last argument:
+```javascript
+client.constructDateObject(CLIENTID, "LAST", 2, "YEARS", "FISCAL");
+```
 ###Date Comparisons
 To perform a date comparison on a period period, which is possible on some endpoints, make the last argument in your `constructDateObject()` call equal to `PRIORPERIOD`. Then, assign this to the `dateRangeCompare` attribute of the criteria object:
 ```javascript
