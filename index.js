@@ -265,15 +265,25 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
                 ctx._errorcallback(errorinfo4);
                 callback(errorinfo4);
               } else {
-                var path = response.headers.location.toString().split('?')[1],
-                  parts = path.split('&'),
-                  verifier = "";
-                for (var p = 0; p < parts.length; p++) {
-                  var pbits = parts[p].split('=');
-                  if (pbits[0] == 'oauth_verifier') {
-                    verifier = pbits[1];
-                    break;
+                try {
+                  var path = response.headers.location.toString().split('?')[1],
+                    parts = path.split('&'),
+                    verifier = "";
+                  for (var p = 0; p < parts.length; p++) {
+                    var pbits = parts[p].split('=');
+                    if (pbits[0] == 'oauth_verifier') {
+                      verifier = pbits[1];
+                      break;
+                    }
                   }
+                } catch(e) {
+                  var errorinfo92 = {
+                    msg: "REST API header format incorrect. Could not authenticate user. Location was " + response.headers.location.toString(),
+                    code: "RESTAPIAUTHHEADER"
+                  };
+                  ctx._errorcallback(errorinfo92);
+                  callback(errorinfo92);
+                  return;
                 }
                 if (verifier.length < 2) {
                   var errorinfo5 = {
