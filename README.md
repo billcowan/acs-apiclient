@@ -138,3 +138,30 @@ client.callResource("/someEndpoint", "GET", {
   // Handle response
 });
 ```
+###Example with clientId
+Some endpoints require a clientId as part of the request. You can get this by calling the `currentUser` endpoint. Here's a nested example of calling the currentUser endpoint, and then calling another endpoint using the clientId:
+```javascript
+// Call the current user endpoint
+client.callResource("currentUser", "GET", {}, function(error, data) {
+  if (error) {
+    throw new Error(JSON.stringify(error));
+  } else {
+    var clientId = data.clientId;
+    console.log("My client ID is ", clientId);
+    for (var i = 0; i < data.links.length; i++) {
+      var lnk = data.links[i];
+      if (lnk.rel == "user") {
+        var userServ = lnk.href.substr(lnk.href.indexOf('services/') + 'services/'.length);
+        console.log("Calling user endpoint: ", userServ);
+        client.callResource(userServ, "GET", {}, function(error, data) {
+          if (error) {
+            throw new Error(JSON.stringify(error));
+          } else {
+            console.log(data);  // Data will be an object
+          }
+        });
+      }
+    }
+  }
+});
+```
