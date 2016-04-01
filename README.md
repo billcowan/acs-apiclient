@@ -165,3 +165,24 @@ client.callResource("currentUser", "GET", {}, function(error, data) {
   }
 });
 ```
+
+###Queued Resources
+There are some resources that can take a while to generate. The interaction with the endpoints for generating these is abstracted by the `callQueuedResource()` function. This hides the sequence of calls necessary to get the response data. Here is an example calling a queued resource endpoint that requires a criteria object:
+```javascript
+// Call the respondentextract endpoint
+client.callQueuedResource("clients/12345678/measures/87654321/respondentsextract", {
+	criteria: {
+	    "dateRange": client.constructDateObject(clientId, "WEEKTODATE"),
+	    "questionKeys": [321456, 532143]
+	}
+}, function(error, data) {
+	if (error) {
+	    throw new Error(JSON.stringify(error));
+	} else {
+	    console.log(data);  // Data will be an object
+	}
+    });
+```
+
+In this case, the dateRange and questionKeys are optional, but the criteria object that wraps them is required.
+Behind the scenes, the request is POSTing to the endpoint and then GETting until the the report is completed and the data is returned.
