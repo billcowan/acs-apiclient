@@ -355,16 +355,17 @@ ACSClient.prototype._verifyAuthenticationState = function (callback) {
  * @param method
  * @param data
  * @param callback
+ * @param queued
  * @private
  */
-ACSClient.prototype._performReasonedRequest = function (path, method, data, callback) {
+ACSClient.prototype._performReasonedRequest = function (path, method, data, callback, queued) {
 
   method = method.toUpperCase().trim();
   callback = callback || function () {
     // no-op
   };
   data = data || {};
-if(method !== "POST" && method !== "PUT"){
+if(queued || (method !== "POST" && method !== "PUT")){
   var qstrver = "?",
     cnt = 0;
   for (var item in data) {
@@ -394,7 +395,11 @@ if(method !== "POST" && method !== "PUT"){
       this._oa.put(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, data, "application/json", callback);
       break;
     case "POST":
-      this._oa.post(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, data, "application/json", callback);
+      if (queued) {
+        this._oa.post(this.opts.service_root + "/services/" + path + qstrver, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, {}, "application/json", callback);
+      } else {
+        this._oa.post(this.opts.service_root + "/services/" + path, this.opts.oauth_access_token, this.opts.oauth_access_token_secret, data, "application/json", callback);
+      }
       break;
   }
 
@@ -512,6 +517,74 @@ ACSClient.prototype.callResource = function (path, method, data, callback) {
           }
         }
       });
+    }
+  });
+};
+
+
+/**
+ * Call a protected, queued resource. These resources start with a POST to initiate the request, and then GETs to check
+ * the status of the request and eventually get the results.
+ * @param path String The resource. Eg: "currentUser"
+ * @param data Object to be used for request options
+ * @param callback Function Will be called on success or failure once queued request has completed
+ * @param id Number If present this is a nested call to see if previously requested report has completed
+ */
+ACSClient.prototype.callQueuedResource = function (path, data, callback, id) {
+  var method = id ? "GET" : "POST";
+  var queued = id ? false : true;
+  var ctx = this;
+
+  if (typeof data == 'function') {
+    callback = data;
+    data = {};
+  }
+
+  data = data || {};
+  callback = callback || function () {
+        // no-op
+      };
+
+  path = path.replace('\\', '/');
+
+  // Strip leading slashes
+  if (path.charAt(0) == '/') {
+    path = path.substr(1);
+  }
+  this._verifyAuthenticationState(function (error) {
+    // Great! Was there an error?
+    if (error) {
+      callback(error);
+    } else {
+      ctx._performReasonedRequest(path, method, data, function (error, response, body, serverCookies) {
+        var dtaobj = body ? JSON.parse(body) : {};
+        var id = dtaobj.reportId;
+        var respStatus = response && response.statusCode;
+        var reportStatus = dtaobj.reportStatus;
+        var wait = reportStatus === "GENERATED" ? 0 : 1000;
+
+        if (error) {
+          var errorinfo = {
+            msg: "There was an error retrieving protected resource \"" + path + "\" using \"" + method + "\"",
+            code: "ERRORCONTACTINGRESOURCE"
+          };
+          ctx._errorcallback(errorinfo);
+          callback(errorinfo);
+        } else if (respStatus === 201 || respStatus === 202) {
+          setTimeout((function () {
+            this.callQueuedResource(path, { reportId: id }, callback, id);
+          }).bind(ctx), wait);
+        } else {
+          if (dtaobj.errorCode) {
+            callback({
+              msg: dtaobj.message,
+              code: dtaobj.errorCode.toString()
+            }, null);
+          } else {
+            callback(null, dtaobj);
+          }
+        }
+      }, queued);
     }
   });
 };
